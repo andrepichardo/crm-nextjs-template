@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { ArrowLeft } from "lucide-react"
 
 export default function CustomerSignUpPage() {
   const [email, setEmail] = useState("")
@@ -37,7 +38,7 @@ export default function CustomerSignUpPage() {
         },
       })
       if (error) throw error
-      router.push("/auth/sign-up-success")
+      router.push("/auth/sign-up-success?type=customer")
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
     } finally {
@@ -48,6 +49,14 @@ export default function CustomerSignUpPage() {
   return (
     <div className="flex min-h-screen w-full items-center justify-center p-6 md:p-10">
       <div className="w-full max-w-sm">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Home
+        </Link>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">Customer Sign Up</CardTitle>
@@ -95,7 +104,7 @@ export default function CustomerSignUpPage() {
               </div>
               <div className="mt-4 text-center text-sm">
                 Already have an account?{" "}
-                <Link href="/auth/login" className="underline underline-offset-4">
+                <Link href="/auth/login?redirectTo=/portal" className="underline underline-offset-4">
                   Sign in
                 </Link>
               </div>

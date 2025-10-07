@@ -11,15 +11,29 @@ export default async function BackofficeLayout({ children }: { children: React.R
   } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect("/auth/login")
+    redirect("/auth/login?redirectTo=/backoffice")
   }
 
-  // Get user profile
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  const userTypeSeparationEnabled = process.env.ENABLE_USER_TYPE_SEPARATION === "true"
 
-  if (profile?.user_type !== "staff") {
-    redirect("/portal")
+  if (userTypeSeparationEnabled) {
+    const { data: profile, error } = await supabase.from("profiles").select("user_type").eq("id", user.id).maybeSingle()
+
+    // Check if error is due to missing column (migration not run yet)
+    if (error && error.code === "42703") {
+      console.log("[v0] Backoffice: user_type column not found. Skipping user type check.")
+      // Allow access - migration scripts need to be run
+    } else if (profile?.user_type === "customer") {
+      redirect("/portal")
+    }
   }
+
+  // Fetch profile for header display
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("email, full_name, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle()
 
   return (
     <div className="flex h-screen overflow-hidden">

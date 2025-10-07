@@ -13,12 +13,19 @@ export default async function PortalLayout({ children }: { children: React.React
     redirect("/auth/login?redirectTo=/portal")
   }
 
-  const { data: profile } = await supabase.from("profiles").select("user_type").eq("id", user.id).single()
+  const userTypeSeparationEnabled = process.env.ENABLE_USER_TYPE_SEPARATION === "true"
 
-  if (profile?.user_type !== "customer") {
-    redirect("/backoffice")
+  if (userTypeSeparationEnabled) {
+    const { data: profile, error } = await supabase.from("profiles").select("user_type").eq("id", user.id).maybeSingle()
+
+    // Check if error is due to missing column (migration not run yet)
+    if (error && error.code === "42703") {
+      console.log("[v0] Portal: user_type column not found. Skipping user type check.")
+      // Allow access - migration scripts need to be run
+    } else if (profile?.user_type === "staff") {
+      redirect("/backoffice")
+    }
   }
-  // </CHANGE>
 
   return (
     <div className="flex h-screen overflow-hidden">

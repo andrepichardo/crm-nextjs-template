@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
+import { ArrowLeft } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -19,6 +20,10 @@ export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get("redirectTo") || "/backoffice"
+
+  const isPortalLogin = redirectTo.includes("/portal")
+  const signUpLink = isPortalLogin ? "/auth/sign-up/customer" : "/auth/sign-up/staff"
+  const signUpText = isPortalLogin ? "Sign up as Customer" : "Sign up as Staff"
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,6 +49,14 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen w-full items-center justify-center p-6 md:p-10">
       <div className="w-full max-w-sm">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Home
+        </Link>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">Sign In</CardTitle>
@@ -83,12 +96,14 @@ export default function LoginPage() {
                   {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
               </div>
-              <div className="mt-4 text-center text-sm">
-                Don&apos;t have an account?{" "}
-                <Link href="/auth/sign-up" className="underline underline-offset-4">
-                  Sign up
-                </Link>
-              </div>
+              {isPortalLogin && (
+                <div className="mt-4 text-center text-sm">
+                  Don&apos;t have an account?{" "}
+                  <Link href="/auth/sign-up/customer" className="underline underline-offset-4">
+                    Sign up as Customer
+                  </Link>
+                </div>
+              )}
             </form>
           </CardContent>
         </Card>

@@ -28,7 +28,6 @@ export default function HomePage() {
                 <Link href="/backoffice">Access Backoffice</Link>
               </Button>
               <p className="text-xs text-muted-foreground mt-2 text-center">For internal staff only</p>
-              {/* </CHANGE> */}
             </CardContent>
           </Card>
 
@@ -47,7 +46,6 @@ export default function HomePage() {
                 <Link href="/portal">Access Portal</Link>
               </Button>
               <p className="text-xs text-muted-foreground mt-2 text-center">For customers only</p>
-              {/* </CHANGE> */}
             </CardContent>
           </Card>
         </div>
@@ -61,11 +59,8 @@ export default function HomePage() {
             <Button asChild>
               <Link href="/auth/sign-up/customer">Sign Up as Customer</Link>
             </Button>
-            <Button asChild variant="secondary">
-              <Link href="/auth/sign-up/staff">Sign Up as Staff</Link>
-            </Button>
-            {/* </CHANGE> */}
           </div>
+          <p className="text-xs text-muted-foreground mt-4">Staff accounts are created by administrators only</p>
         </div>
       </div>
     </div>

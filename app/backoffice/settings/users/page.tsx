@@ -18,6 +18,9 @@ import { Badge } from "@/components/ui/badge"
 import { UserPlus, MoreVertical, Shield } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { type Role, getRoleLabel, getRoleDescription } from "@/lib/permissions"
+import { createClient } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface User {
   id: string
@@ -66,6 +69,60 @@ const mockUsers: User[] = [
 export default function UsersPage() {
   const [users] = useState<User[]>(mockUsers)
   const [isAddUserOpen, setIsAddUserOpen] = useState(false)
+  const [newUserEmail, setNewUserEmail] = useState("")
+  const [newUserName, setNewUserName] = useState("")
+  const [newUserRole, setNewUserRole] = useState<Role>("sales_rep")
+  const [isCreating, setIsCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const router = useRouter()
+
+  const handleCreateStaffUser = async () => {
+    setIsCreating(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const supabase = createClient()
+
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: newUserEmail,
+        password: Math.random().toString(36).slice(-12) + "A1!",
+        options: {
+          data: {
+            full_name: newUserName,
+            user_type: "staff",
+          },
+        },
+      })
+
+      if (signUpError) throw signUpError
+
+      if (data.user) {
+        const { error: roleError } = await supabase.from("user_roles").upsert({
+          user_id: data.user.id,
+          role: newUserRole,
+        })
+
+        if (roleError) throw roleError
+      }
+
+      setSuccess(`Staff account created successfully! An email has been sent to ${newUserEmail} to set their password.`)
+      setNewUserEmail("")
+      setNewUserName("")
+      setNewUserRole("sales_rep")
+
+      setTimeout(() => {
+        setIsAddUserOpen(false)
+        setSuccess(null)
+        router.refresh()
+      }, 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create staff account")
+    } finally {
+      setIsCreating(false)
+    }
+  }
 
   const getRoleBadgeVariant = (role: Role) => {
     switch (role) {
@@ -93,26 +150,55 @@ export default function UsersPage() {
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="h-4 w-4 mr-2" />
-              Add User
+              Add Staff User
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New User</DialogTitle>
-              <DialogDescription>Invite a new team member to your CRM</DialogDescription>
+              <DialogTitle>Create Staff Account</DialogTitle>
+              <DialogDescription>
+                Add a new staff member to your CRM. They will receive an email to set their password.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              {success && (
+                <Alert>
+                  <AlertDescription>{success}</AlertDescription>
+                </Alert>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
-                <Input id="name" placeholder="John Doe" />
+                <Input
+                  id="name"
+                  placeholder="John Doe"
+                  value={newUserName}
+                  onChange={(e) => setNewUserName(e.target.value)}
+                  disabled={isCreating}
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="john@example.com" />
+                <Label htmlFor="email">Work Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="john@company.com"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  disabled={isCreating}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
-                <Select defaultValue="sales_rep">
+                <Select
+                  value={newUserRole}
+                  onValueChange={(value) => setNewUserRole(value as Role)}
+                  disabled={isCreating}
+                >
                   <SelectTrigger id="role">
                     <SelectValue />
                   </SelectTrigger>
@@ -144,7 +230,13 @@ export default function UsersPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button className="w-full">Send Invitation</Button>
+              <Button
+                className="w-full"
+                onClick={handleCreateStaffUser}
+                disabled={isCreating || !newUserEmail || !newUserName}
+              >
+                {isCreating ? "Creating Account..." : "Create Staff Account"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
