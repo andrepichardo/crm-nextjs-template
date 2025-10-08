@@ -47,17 +47,13 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] Image converted to base64, length:", dataUrl.length)
 
-    const { error: updateError } = await supabase.from("profiles").upsert(
-      {
-        id: user.id,
-        email: user.email!, // Include email for NOT NULL constraint
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({
         avatar_url: dataUrl,
         updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "id",
-      },
-    )
+      })
+      .eq("id", user.id)
 
     if (updateError) {
       console.error("[v0] Profile update error:", updateError)
