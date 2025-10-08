@@ -1,25 +1,31 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { formatDistanceToNow } from "date-fns"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { formatDistanceToNow } from 'date-fns';
 
 interface Activity {
-  id: string
-  activity_type: string
-  title: string
-  created_at: string
+  id: string;
+  activity_type: string;
+  title: string;
+  created_at: string;
   created_by: {
-    full_name: string | null
-    email: string
-  } | null
+    full_name: string | null;
+    email: string;
+  } | null;
 }
 
 interface RecentActivitiesProps {
-  activities: Activity[]
+  activities: Activity[];
 }
 
 export function RecentActivities({ activities }: RecentActivitiesProps) {
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>Recent Activities</CardTitle>
         <CardDescription>Latest updates from your team</CardDescription>
@@ -27,17 +33,19 @@ export function RecentActivities({ activities }: RecentActivitiesProps) {
       <CardContent>
         <div className="space-y-4">
           {activities.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No recent activities</p>
+            <p className="text-sm text-muted-foreground">
+              No recent activities
+            </p>
           ) : (
             activities.map((activity) => {
               const initials =
                 activity.created_by?.full_name
-                  ?.split(" ")
+                  ?.split(' ')
                   .map((n) => n[0])
-                  .join("")
+                  .join('')
                   .toUpperCase() ||
                 activity.created_by?.email?.[0].toUpperCase() ||
-                "U"
+                'U';
 
               return (
                 <div key={activity.id} className="flex items-start gap-4">
@@ -45,18 +53,25 @@ export function RecentActivities({ activities }: RecentActivitiesProps) {
                     <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium leading-none">{activity.title}</p>
+                    <p className="text-sm font-medium leading-none">
+                      {activity.title}
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      {activity.created_by?.full_name || activity.created_by?.email || "Unknown user"} •{" "}
-                      {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                      {activity.created_by?.full_name ||
+                        activity.created_by?.email ||
+                        'Unknown user'}{' '}
+                      •{' '}
+                      {formatDistanceToNow(new Date(activity.created_at), {
+                        addSuffix: true,
+                      })}
                     </p>
                   </div>
                 </div>
-              )
+              );
             })
           )}
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
