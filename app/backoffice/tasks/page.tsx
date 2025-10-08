@@ -1,9 +1,5 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { DataTable } from "@/components/ui/data-table"
-import { createTaskColumns } from "./columns"
+import { createClient } from "@/lib/supabase/server"
+import { TasksTable } from "./tasks-table"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import {
@@ -16,48 +12,13 @@ import {
 } from "@/components/ui/dialog"
 import { TaskForm } from "@/components/backoffice/task-form"
 
-export default function TasksPage() {
-  const [tasks, setTasks] = useState<any[]>([])
-  const [users, setUsers] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [hasErrors, setHasErrors] = useState(false)
+export default async function TasksPage() {
+  const supabase = await createClient()
 
-  useEffect(() => {
-    async function loadData() {
-      const supabase = createClient()
-
-      const [{ data: tasksData, error: tasksError }, { data: usersData, error: usersError }] = await Promise.all([
-        supabase.from("tasks").select("*").order("due_date", { ascending: true }),
-        supabase.from("profiles").select("id, full_name, email").eq("user_type", "staff").order("full_name"),
-      ])
-
-      if (tasksError) {
-        console.error("[v0] Error fetching tasks:", tasksError)
-        setHasErrors(true)
-      }
-
-      if (usersError) {
-        console.error("[v0] Error fetching users:", usersError)
-        setHasErrors(true)
-      }
-
-      setTasks(tasksData || [])
-      setUsers(usersData || [])
-      setLoading(false)
-    }
-
-    loadData()
-  }, [])
-
-  const columns = createTaskColumns(users)
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-muted-foreground">Loading tasks...</div>
-      </div>
-    )
-  }
+  const [{ data: tasks }, { data: users }] = await Promise.all([
+    supabase.from("tasks").select("*").order("due_date", { ascending: true }),
+    supabase.from("profiles").select("id, full_name, email").eq("user_type", "staff").order("full_name"),
+  ])
 
   return (
     <div className="space-y-6">
@@ -78,20 +39,12 @@ export default function TasksPage() {
               <DialogTitle>Create New Task</DialogTitle>
               <DialogDescription>Add a new task to your list</DialogDescription>
             </DialogHeader>
-            <TaskForm users={users} />
+            <TaskForm users={users || []} />
           </DialogContent>
         </Dialog>
       </div>
 
-      {hasErrors ? (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">
-            Failed to load tasks. Please check your database permissions and ensure all migrations have been run.
-          </p>
-        </div>
-      ) : (
-        <DataTable columns={columns} data={tasks} searchKey="title" searchPlaceholder="Search tasks..." />
-      )}
+      <TasksTable tasks={tasks || []} users={users || []} />
     </div>
   )
 }
