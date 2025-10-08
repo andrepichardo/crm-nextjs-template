@@ -24,11 +24,13 @@ export async function createStaffUser(email: string, fullName: string, role: Rol
       return { success: false, error: "Only admins can create staff users" }
     }
 
+    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL}/auth/login`
+
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password: Math.random().toString(36).slice(-12) + "A1!",
       options: {
-        emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || process.env.NEXT_PUBLIC_SITE_URL,
+        emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
           user_type: "staff",
