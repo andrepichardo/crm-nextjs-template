@@ -35,6 +35,12 @@ export default async function ContactsPage() {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-lg border-2 border-green-500 bg-green-50 p-4 text-center">
+        <p className="text-sm font-semibold text-green-700">
+          ✅ TEST - Código actualizado desplegado correctamente - Versión: {new Date().toISOString()}
+        </p>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Contacts</h1>
