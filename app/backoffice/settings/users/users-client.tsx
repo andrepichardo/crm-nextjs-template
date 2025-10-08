@@ -86,12 +86,26 @@ export function UsersClient({ users: initialUsers }: UsersClientProps) {
         throw new Error(result.error)
       }
 
+      const supabase = createClient()
+      const { data: newUserData } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, role, user_type, created_at, updated_at")
+        .eq("email", newUserEmail)
+        .eq("user_type", "staff")
+        .single()
+
+      if (newUserData) {
+        setUsers([newUserData, ...users])
+      }
+
       setSuccess(result.message)
       setNewUserEmail("")
       setNewUserName("")
       setNewUserRole("sales_rep")
 
-      router.refresh()
+      setTimeout(() => {
+        router.refresh()
+      }, 500)
 
       setTimeout(() => {
         setIsAddUserOpen(false)
