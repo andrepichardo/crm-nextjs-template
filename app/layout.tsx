@@ -13,6 +13,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "CRM System",
   description: "Professional CRM with Portal and Backoffice",
+  icons: {
+    icon: "/icon",
+  },
     generator: 'v0.app'
 }
 
