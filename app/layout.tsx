@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title: "CRM System",
   description: "Professional CRM with Portal and Backoffice",
   icons: {
-    icon: "/icon",
+    icon: "/favicon.ico",
   },
     generator: 'v0.app'
 }
