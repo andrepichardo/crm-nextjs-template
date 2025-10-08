@@ -51,15 +51,10 @@ export default function HomePage() {
         </div>
 
         <div className="mt-16 text-center">
-          <p className="text-sm text-muted-foreground mb-4">Don't have an account?</p>
-          <div className="flex gap-4 justify-center">
-            <Button asChild variant="outline">
-              <Link href="/auth/login">Sign In</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/auth/sign-up/customer">Sign Up as Customer</Link>
-            </Button>
-          </div>
+          <p className="text-sm text-muted-foreground mb-4">New customer?</p>
+          <Button asChild size="lg">
+            <Link href="/auth/sign-up/customer">Create Customer Account</Link>
+          </Button>
           <p className="text-xs text-muted-foreground mt-4">Staff accounts are created by administrators only</p>
         </div>
       </div>
