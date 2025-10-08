@@ -33,8 +33,8 @@ export default function HomePage() {
 
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
-              <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center mb-4">
-                <Users className="w-6 h-6 text-accent" />
+              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <Users className="w-6 h-6 text-primary" />
               </div>
               <CardTitle>Customer Portal</CardTitle>
               <CardDescription>
