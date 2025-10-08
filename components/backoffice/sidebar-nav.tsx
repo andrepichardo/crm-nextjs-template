@@ -3,7 +3,17 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Users, Building2, Briefcase, CheckSquare, Activity, Settings, LogOut } from "lucide-react"
+import {
+  LayoutDashboard,
+  Users,
+  Building2,
+  Briefcase,
+  CheckSquare,
+  Activity,
+  Settings,
+  LogOut,
+  UserCog,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -38,6 +48,11 @@ const navItems = [
     title: "Activities",
     href: "/backoffice/activities",
     icon: Activity,
+  },
+  {
+    title: "Team",
+    href: "/backoffice/settings/users",
+    icon: UserCog,
   },
   {
     title: "Settings",
