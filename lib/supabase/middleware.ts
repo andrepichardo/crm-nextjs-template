@@ -46,6 +46,13 @@ export async function updateSession(request: NextRequest) {
         const errorCode = error.code || (error as any).error_code || ""
         const errorMessage = error.message || ""
 
+        if (errorCode === "42P17" || errorMessage.includes("infinite recursion")) {
+          console.log("[v0] ⚠️  Infinite recursion detected in RLS policies!")
+          console.log("[v0] Please run script 012_simple_rls_fix.sql in Supabase to fix RLS policies.")
+          console.log("[v0] Bypassing user type check to allow access.")
+          return supabaseResponse
+        }
+
         if (errorCode === "42703" || errorMessage.includes("column") || errorMessage.includes("does not exist")) {
           console.log("[v0] ⚠️  user_type column not found. Please run migration scripts 007 and 008.")
           console.log("[v0] Allowing access until migrations are complete.")
