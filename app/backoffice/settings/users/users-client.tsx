@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { UserPlus, MoreVertical, Shield, Mail, AlertCircle } from "lucide-react"
+import { UserPlus, MoreVertical, Shield } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +27,7 @@ import { type Role, getRoleLabel, getRoleDescription } from "@/lib/permissions"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { createStaffUser, updateUserProfile, updateUserRole, deleteUser } from "./actions"
 
 interface User {
   id: string
@@ -36,8 +37,6 @@ interface User {
   user_type: string
   created_at: string
   updated_at: string | null
-  email_confirmed_at: string | null
-  last_sign_in_at: string | null
 }
 
 interface UsersClientProps {
@@ -81,50 +80,23 @@ export function UsersClient({ users: initialUsers }: UsersClientProps) {
     setSuccess(null)
 
     try {
-      const supabase = createClient()
+      const result = await createStaffUser(newUserEmail, newUserName, newUserRole)
 
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: newUserEmail,
-        password: Math.random().toString(36).slice(-12) + "A1!",
-        options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || window.location.origin,
-          data: {
-            full_name: newUserName,
-            user_type: "staff",
-            role: newUserRole,
-          },
-        },
-      })
-
-      if (signUpError) throw signUpError
-
-      if (data.user) {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        const { error: roleError } = await supabase
-          .from("profiles")
-          .update({
-            role: newUserRole,
-            full_name: newUserName,
-            user_type: "staff",
-          })
-          .eq("id", data.user.id)
-
-        if (roleError) {
-          console.error("[v0] Error updating role:", roleError)
-        }
+      if (!result.success) {
+        throw new Error(result.error)
       }
 
-      setSuccess(`Staff account created successfully! An email has been sent to ${newUserEmail} to set their password.`)
+      setSuccess(result.message)
       setNewUserEmail("")
       setNewUserName("")
       setNewUserRole("sales_rep")
 
+      router.refresh()
+
       setTimeout(() => {
         setIsAddUserOpen(false)
         setSuccess(null)
-        router.refresh()
-      }, 2000)
+      }, 1500)
     } catch (err) {
       console.error("[v0] Error creating user:", err)
       setError(err instanceof Error ? err.message : "Failed to create staff account")
@@ -141,6 +113,14 @@ export function UsersClient({ users: initialUsers }: UsersClientProps) {
   }
 
   const handleChangeRole = (user: User) => {
+    const adminCount = users.filter((u) => u.role === "admin" && u.user_type === "staff").length
+
+    if (user.role === "admin" && adminCount === 1) {
+      setError("Cannot change the role of the last administrator. Please assign another admin first.")
+      setTimeout(() => setError(null), 5000)
+      return
+    }
+
     setSelectedUser(user)
     setEditUserRole(user.role || "sales_rep")
     setIsChangeRoleOpen(true)
@@ -154,24 +134,25 @@ export function UsersClient({ users: initialUsers }: UsersClientProps) {
     setSuccess(null)
 
     try {
-      const supabase = createClient()
+      const result = await updateUserProfile(selectedUser.id, editUserName, editUserRole)
 
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          full_name: editUserName,
-          role: editUserRole,
-        })
-        .eq("id", selectedUser.id)
+      if (!result.success) {
+        throw new Error(result.error)
+      }
 
-      if (updateError) throw updateError
+      setUsers(
+        users.map((u) =>
+          u.id === selectedUser.id
+            ? { ...u, full_name: editUserName, role: editUserRole, updated_at: new Date().toISOString() }
+            : u,
+        ),
+      )
 
-      setSuccess("User updated successfully!")
+      setSuccess(result.message)
 
       setTimeout(() => {
         setIsEditUserOpen(false)
         setSuccess(null)
-        router.refresh()
       }, 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update user")
@@ -183,28 +164,38 @@ export function UsersClient({ users: initialUsers }: UsersClientProps) {
   const handleUpdateRole = async () => {
     if (!selectedUser) return
 
+    const adminCount = users.filter((u) => u.role === "admin" && u.user_type === "staff").length
+
+    if (selectedUser.role === "admin" && editUserRole !== "admin" && adminCount === 1) {
+      setError("Cannot change the role of the last administrator. Please assign another admin first.")
+      return
+    }
+
     setIsUpdating(true)
     setError(null)
     setSuccess(null)
 
     try {
-      const supabase = createClient()
+      const result = await updateUserRole(selectedUser.id, editUserRole)
 
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ role: editUserRole })
-        .eq("id", selectedUser.id)
+      if (!result.success) {
+        throw new Error(result.error)
+      }
 
-      if (updateError) throw updateError
+      setUsers(
+        users.map((u) =>
+          u.id === selectedUser.id ? { ...u, role: editUserRole, updated_at: new Date().toISOString() } : u,
+        ),
+      )
 
-      setSuccess("Role updated successfully!")
+      setSuccess(result.message)
 
       setTimeout(() => {
         setIsChangeRoleOpen(false)
         setSuccess(null)
-        router.refresh()
       }, 1500)
     } catch (err) {
+      console.error("[v0] Error updating role:", err)
       setError(err instanceof Error ? err.message : "Failed to update role")
     } finally {
       setIsUpdating(false)
@@ -214,6 +205,7 @@ export function UsersClient({ users: initialUsers }: UsersClientProps) {
   const handleDeleteUser = async (user: User) => {
     if (user.id === currentUserId) {
       setError("You cannot delete your own account")
+      setTimeout(() => setError(null), 3000)
       return
     }
 
@@ -229,23 +221,23 @@ export function UsersClient({ users: initialUsers }: UsersClientProps) {
     setSuccess(null)
 
     try {
-      const supabase = createClient()
+      const result = await deleteUser(user.id)
 
-      const { error: profileError } = await supabase.from("profiles").delete().eq("id", user.id)
-
-      if (profileError) throw profileError
-
-      setSuccess("User deleted successfully!")
+      if (!result.success) {
+        throw new Error(result.error)
+      }
 
       setUsers(users.filter((u) => u.id !== user.id))
+      setSuccess(result.message)
 
       setTimeout(() => {
         setSuccess(null)
         router.refresh()
-      }, 2000)
+      }, 1500)
     } catch (err) {
       console.error("[v0] Error deleting user:", err)
       setError(err instanceof Error ? err.message : "Failed to delete user")
+      setTimeout(() => setError(null), 3000)
     }
   }
 
@@ -462,15 +454,7 @@ export function UsersClient({ users: initialUsers }: UsersClientProps) {
                       : user.email?.[0].toUpperCase()}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{user.full_name || "No name"}</p>
-                      {!user.email_confirmed_at && (
-                        <Badge variant="outline" className="text-amber-600 border-amber-600">
-                          <AlertCircle className="h-3 w-3 mr-1" />
-                          Unconfirmed
-                        </Badge>
-                      )}
-                    </div>
+                    <p className="font-medium">{user.full_name || "No name"}</p>
                     <p className="text-sm text-muted-foreground">{user.email}</p>
                   </div>
                 </div>
@@ -497,23 +481,13 @@ export function UsersClient({ users: initialUsers }: UsersClientProps) {
                       <DropdownMenuItem onClick={() => alert("View Permissions - Coming soon")}>
                         View Permissions
                       </DropdownMenuItem>
-                      {!user.email_confirmed_at && (
+                      {isAdmin && user.id !== currentUserId && (
                         <>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleResendConfirmation(user)}>
-                            <Mail className="h-4 w-4 mr-2" />
-                            Resend Confirmation Email
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(user)}>
+                            Delete User
                           </DropdownMenuItem>
                         </>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive" onClick={() => handleDeactivateUser(user)}>
-                        Deactivate User
-                      </DropdownMenuItem>
-                      {isAdmin && user.id !== currentUserId && (
-                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(user)}>
-                          Delete User
-                        </DropdownMenuItem>
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>

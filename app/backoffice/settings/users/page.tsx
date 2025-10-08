@@ -10,20 +10,9 @@ export default async function UsersPage() {
     .eq("user_type", "staff")
     .order("created_at", { ascending: false })
 
-  // Get auth data for email confirmation status
-  const {
-    data: { users: authUsers },
-  } = await supabase.auth.admin.listUsers()
-
-  // Merge profile data with auth data
-  const users = (profiles || []).map((profile) => {
-    const authUser = authUsers?.find((u) => u.id === profile.id)
-    return {
-      ...profile,
-      email_confirmed_at: authUser?.email_confirmed_at || null,
-      last_sign_in_at: authUser?.last_sign_in_at || null,
-    }
-  })
+  // we'll handle email confirmation status on the client side or remove the feature
+  // For now, we'll pass the profiles as-is and remove the unconfirmed badge
+  const users = profiles || []
 
   return <UsersClient users={users} />
 }
