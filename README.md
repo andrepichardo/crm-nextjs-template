@@ -231,6 +231,3 @@ MIT License - feel free to use this project for your own purposes.
 ---
 
 Built with ❤️ using Next.js, Supabase, and modern web technologies.
-\`\`\`
-
-```typescript file="" isHidden
