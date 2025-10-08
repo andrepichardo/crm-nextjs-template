@@ -1,4 +1,7 @@
-import { createClient } from "@/lib/supabase/server"
+"use client"
+
+import { useEffect, useState } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { DataTable } from "@/components/ui/data-table"
 import { createDealColumns } from "./columns"
 import { Button } from "@/components/ui/button"
@@ -15,33 +18,59 @@ import { DealForm } from "@/components/backoffice/deal-form"
 import { PipelineBoard } from "@/components/backoffice/pipeline-board"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-export default async function DealsPage() {
-  const supabase = await createClient()
+export default function DealsPage() {
+  const [deals, setDeals] = useState<any[]>([])
+  const [companies, setCompanies] = useState<any[]>([])
+  const [contacts, setContacts] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [hasErrors, setHasErrors] = useState(false)
 
-  const [
-    { data: deals, error: dealsError },
-    { data: companies, error: companiesError },
-    { data: contacts, error: contactsError },
-    { data: users, error: usersError },
-  ] = await Promise.all([
-    supabase.from("deals").select("*").order("created_at", { ascending: false }),
-    supabase.from("companies").select("id, name").order("name"),
-    supabase.from("contacts").select("id, first_name, last_name").order("first_name"),
-    supabase.from("profiles").select("id, full_name, email").eq("user_type", "staff").order("full_name"),
-  ])
+  useEffect(() => {
+    async function loadData() {
+      const supabase = createClient()
 
-  if (dealsError) {
-    console.error("[v0] Error fetching deals:", dealsError)
-    console.error("[v0] Error details:", JSON.stringify(dealsError, null, 2))
+      const [
+        { data: dealsData, error: dealsError },
+        { data: companiesData, error: companiesError },
+        { data: contactsData, error: contactsError },
+        { data: usersData, error: usersError },
+      ] = await Promise.all([
+        supabase.from("deals").select("*").order("created_at", { ascending: false }),
+        supabase.from("companies").select("id, name").order("name"),
+        supabase.from("contacts").select("id, first_name, last_name").order("first_name"),
+        supabase.from("profiles").select("id, full_name, email").eq("user_type", "staff").order("full_name"),
+      ])
+
+      if (dealsError) {
+        console.error("[v0] Error fetching deals:", dealsError)
+        setHasErrors(true)
+      }
+
+      if (usersError) {
+        console.error("[v0] Error fetching users:", usersError)
+        setHasErrors(true)
+      }
+
+      setDeals(dealsData || [])
+      setCompanies(companiesData || [])
+      setContacts(contactsData || [])
+      setUsers(usersData || [])
+      setLoading(false)
+    }
+
+    loadData()
+  }, [])
+
+  const columns = createDealColumns(companies, contacts, users)
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-muted-foreground">Loading deals...</div>
+      </div>
+    )
   }
-
-  if (usersError) {
-    console.error("[v0] Error fetching users:", usersError)
-    console.error("[v0] Error details:", JSON.stringify(usersError, null, 2))
-  }
-
-  const columns = createDealColumns(companies || [], contacts || [], users || [])
-  const hasErrors = dealsError || companiesError || contactsError || usersError
 
   return (
     <div className="space-y-6">
@@ -62,7 +91,7 @@ export default async function DealsPage() {
               <DialogTitle>Create New Deal</DialogTitle>
               <DialogDescription>Add a new deal to your pipeline</DialogDescription>
             </DialogHeader>
-            <DealForm companies={companies || []} contacts={contacts || []} users={users || []} />
+            <DealForm companies={companies} contacts={contacts} users={users} />
           </DialogContent>
         </Dialog>
       </div>
@@ -87,11 +116,11 @@ export default async function DealsPage() {
           </TabsList>
 
           <TabsContent value="pipeline" className="space-y-4">
-            <PipelineBoard deals={deals || []} />
+            <PipelineBoard deals={deals} />
           </TabsContent>
 
           <TabsContent value="table" className="space-y-4">
-            <DataTable columns={columns} data={deals || []} searchKey="title" searchPlaceholder="Search deals..." />
+            <DataTable columns={columns} data={deals} searchKey="title" searchPlaceholder="Search deals..." />
           </TabsContent>
         </Tabs>
       )}

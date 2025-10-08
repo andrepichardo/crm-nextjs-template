@@ -1,4 +1,7 @@
-import { createClient } from "@/lib/supabase/server"
+"use client"
+
+import { useEffect, useState } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { DataTable } from "@/components/ui/data-table"
 import { createTaskColumns } from "./columns"
 import { Button } from "@/components/ui/button"
@@ -13,25 +16,48 @@ import {
 } from "@/components/ui/dialog"
 import { TaskForm } from "@/components/backoffice/task-form"
 
-export default async function TasksPage() {
-  const supabase = await createClient()
+export default function TasksPage() {
+  const [tasks, setTasks] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [hasErrors, setHasErrors] = useState(false)
 
-  const [{ data: tasks, error: tasksError }, { data: users, error: usersError }] = await Promise.all([
-    supabase.from("tasks").select("*").order("due_date", { ascending: true }),
-    supabase.from("profiles").select("id, full_name, email").eq("user_type", "staff").order("full_name"),
-  ])
+  useEffect(() => {
+    async function loadData() {
+      const supabase = createClient()
 
-  if (tasksError) {
-    console.error("[v0] Error fetching tasks:", tasksError)
-    console.error("[v0] Error details:", JSON.stringify(tasksError, null, 2))
+      const [{ data: tasksData, error: tasksError }, { data: usersData, error: usersError }] = await Promise.all([
+        supabase.from("tasks").select("*").order("due_date", { ascending: true }),
+        supabase.from("profiles").select("id, full_name, email").eq("user_type", "staff").order("full_name"),
+      ])
+
+      if (tasksError) {
+        console.error("[v0] Error fetching tasks:", tasksError)
+        setHasErrors(true)
+      }
+
+      if (usersError) {
+        console.error("[v0] Error fetching users:", usersError)
+        setHasErrors(true)
+      }
+
+      setTasks(tasksData || [])
+      setUsers(usersData || [])
+      setLoading(false)
+    }
+
+    loadData()
+  }, [])
+
+  const columns = createTaskColumns(users)
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-muted-foreground">Loading tasks...</div>
+      </div>
+    )
   }
-
-  if (usersError) {
-    console.error("[v0] Error fetching users:", usersError)
-    console.error("[v0] Error details:", JSON.stringify(usersError, null, 2))
-  }
-
-  const columns = createTaskColumns(users || [])
 
   return (
     <div className="space-y-6">
@@ -52,19 +78,19 @@ export default async function TasksPage() {
               <DialogTitle>Create New Task</DialogTitle>
               <DialogDescription>Add a new task to your list</DialogDescription>
             </DialogHeader>
-            <TaskForm users={users || []} />
+            <TaskForm users={users} />
           </DialogContent>
         </Dialog>
       </div>
 
-      {tasksError || usersError ? (
+      {hasErrors ? (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
             Failed to load tasks. Please check your database permissions and ensure all migrations have been run.
           </p>
         </div>
       ) : (
-        <DataTable columns={columns} data={tasks || []} searchKey="title" searchPlaceholder="Search tasks..." />
+        <DataTable columns={columns} data={tasks} searchKey="title" searchPlaceholder="Search tasks..." />
       )}
     </div>
   )

@@ -1,4 +1,7 @@
-import { createClient } from "@/lib/supabase/server"
+"use client"
+
+import { useEffect, useState } from "react"
+import { createClient } from "@/lib/supabase/client"
 import { DataTable } from "@/components/ui/data-table"
 import { createColumns } from "./columns"
 import { Button } from "@/components/ui/button"
@@ -13,34 +16,53 @@ import {
 } from "@/components/ui/dialog"
 import { ContactForm } from "@/components/backoffice/contact-form"
 
-export default async function ContactsPage() {
-  const supabase = await createClient()
+export default function ContactsPage() {
+  const [contacts, setContacts] = useState<any[]>([])
+  const [companies, setCompanies] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const supabase = createClient()
 
-  const [{ data: contacts, error: contactsError }, { data: companies, error: companiesError }] = await Promise.all([
-    supabase.from("contacts").select("*").order("created_at", { ascending: false }),
-    supabase.from("companies").select("id, name").order("name"),
-  ])
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [{ data: contactsData, error: contactsError }, { data: companiesData, error: companiesError }] =
+          await Promise.all([
+            supabase.from("contacts").select("*").order("created_at", { ascending: false }),
+            supabase.from("companies").select("id, name").order("name"),
+          ])
 
-  if (contactsError) {
-    console.error("[v0] Error fetching contacts:", contactsError)
-    console.error("[v0] Error details:", JSON.stringify(contactsError, null, 2))
+        if (contactsError) throw contactsError
+        if (companiesError) throw companiesError
+
+        setContacts(contactsData || [])
+        setCompanies(companiesData || [])
+      } catch (err: any) {
+        console.error("[v0] Error fetching data:", err)
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  const columns = createColumns(companies)
+
+  if (loading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="mt-4 text-sm text-muted-foreground">Loading contacts...</p>
+        </div>
+      </div>
+    )
   }
-
-  if (companiesError) {
-    console.error("[v0] Error fetching companies:", companiesError)
-    console.error("[v0] Error details:", JSON.stringify(companiesError, null, 2))
-  }
-
-  const columns = createColumns(companies || [])
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border-2 border-green-500 bg-green-50 p-4 text-center">
-        <p className="text-sm font-semibold text-green-700">
-          ✅ TEST - Código actualizado desplegado correctamente - Versión: {new Date().toISOString()}
-        </p>
-      </div>
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Contacts</h1>
@@ -58,22 +80,17 @@ export default async function ContactsPage() {
               <DialogTitle>Create New Contact</DialogTitle>
               <DialogDescription>Add a new contact to your CRM</DialogDescription>
             </DialogHeader>
-            <ContactForm companies={companies || []} />
+            <ContactForm companies={companies} />
           </DialogContent>
         </Dialog>
       </div>
 
-      {contactsError ? (
+      {error ? (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">Failed to load contacts. Please check your database permissions.</p>
+          <p className="text-sm text-destructive">Failed to load contacts: {error}</p>
         </div>
       ) : (
-        <DataTable
-          columns={columns}
-          data={contacts || []}
-          searchKey="first_name"
-          searchPlaceholder="Search contacts..."
-        />
+        <DataTable columns={columns} data={contacts} searchKey="first_name" searchPlaceholder="Search contacts..." />
       )}
     </div>
   )
