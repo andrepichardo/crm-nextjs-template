@@ -18,65 +18,62 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 export default async function DealsPage() {
   const supabase = await createClient()
 
-  try {
-    const [
-      { data: deals, error: dealsError },
-      { data: companies, error: companiesError },
-      { data: contacts, error: contactsError },
-      { data: users, error: usersError },
-    ] = await Promise.all([
-      supabase.from("deals").select("*").order("created_at", { ascending: false }),
-      supabase.from("companies").select("id, name").order("name"),
-      supabase.from("contacts").select("id, first_name, last_name").order("first_name"),
-      supabase.from("profiles").select("id, full_name, email").order("full_name"),
-    ])
+  const [
+    { data: deals, error: dealsError },
+    { data: companies, error: companiesError },
+    { data: contacts, error: contactsError },
+    { data: users, error: usersError },
+  ] = await Promise.all([
+    supabase.from("deals").select("*").order("created_at", { ascending: false }),
+    supabase.from("companies").select("id, name").order("name"),
+    supabase.from("contacts").select("id, first_name, last_name").order("first_name"),
+    supabase.from("profiles").select("id, full_name, email").eq("user_type", "staff").order("full_name"),
+  ])
 
-    if (dealsError) {
-      console.error("[v0] Error fetching deals:", dealsError)
-      throw new Error(`Failed to load deals: ${dealsError.message}`)
-    }
+  if (dealsError) {
+    console.error("[v0] Error fetching deals:", dealsError)
+    console.error("[v0] Error details:", JSON.stringify(dealsError, null, 2))
+  }
 
-    if (companiesError) {
-      console.error("[v0] Error fetching companies:", companiesError)
-      throw new Error(`Failed to load companies: ${companiesError.message}`)
-    }
+  if (usersError) {
+    console.error("[v0] Error fetching users:", usersError)
+    console.error("[v0] Error details:", JSON.stringify(usersError, null, 2))
+  }
 
-    if (contactsError) {
-      console.error("[v0] Error fetching contacts:", contactsError)
-      throw new Error(`Failed to load contacts: ${contactsError.message}`)
-    }
+  const columns = createDealColumns(companies || [], contacts || [], users || [])
+  const hasErrors = dealsError || companiesError || contactsError || usersError
 
-    if (usersError) {
-      console.error("[v0] Error fetching users:", usersError)
-      throw new Error(`Failed to load users: ${usersError.message}`)
-    }
-
-    const columns = createDealColumns(companies || [], contacts || [], users || [])
-
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Deals</h1>
-            <p className="text-muted-foreground">Manage your sales pipeline</p>
-          </div>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Deal
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Create New Deal</DialogTitle>
-                <DialogDescription>Add a new deal to your pipeline</DialogDescription>
-              </DialogHeader>
-              <DealForm companies={companies || []} contacts={contacts || []} users={users || []} />
-            </DialogContent>
-          </Dialog>
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Deals</h1>
+          <p className="text-muted-foreground">Manage your sales pipeline</p>
         </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Deal
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New Deal</DialogTitle>
+              <DialogDescription>Add a new deal to your pipeline</DialogDescription>
+            </DialogHeader>
+            <DealForm companies={companies || []} contacts={contacts || []} users={users || []} />
+          </DialogContent>
+        </Dialog>
+      </div>
 
+      {hasErrors ? (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">
+            Failed to load some data. Please check your database permissions and ensure all migrations have been run.
+          </p>
+        </div>
+      ) : (
         <Tabs defaultValue="pipeline" className="space-y-4">
           <TabsList>
             <TabsTrigger value="pipeline" className="gap-2">
@@ -97,10 +94,7 @@ export default async function DealsPage() {
             <DataTable columns={columns} data={deals || []} searchKey="title" searchPlaceholder="Search deals..." />
           </TabsContent>
         </Tabs>
-      </div>
-    )
-  } catch (error) {
-    console.error("[v0] Deals page error:", error)
-    throw error
-  }
+      )}
+    </div>
+  )
 }
